@@ -1,67 +1,58 @@
-```
+# Convolutional Neural Networks (CNNs / ConvNets)
+- Convolutional Neural Networks are very similar to ordinary Neural Networks,they are made up of neurons that have learnable weights and biases.Each neuron receives some inputs, performs a dot product and optionally follows it with a non-linearity. The whole network still expresses a single differentiable score function: from the raw image pixels on one end to class scores at the other. And they still have a loss function (e.g. SVM/Softmax) on the last (fully-connected) layer and all the tips/tricks developed for learning regular Neural Networks still apply.
+
+### why can't we use Fully Connected Neural Networks to Images ?
+
+
+*   Regular Neural Nets don’t scale well to full images. In CIFAR-10, images are only of size 32x32x3 (32 wide, 32 high, 3 color channels), so a single fully-connected neuron in a first hidden layer of a regular Neural Network would have 32*32*3 = 3072 weights. This amount still seems manageable, but clearly this fully-connected structure does not scale to larger images. For example, an image of more respectable size, e.g. 200x200x3, would lead to neurons that have 200*200*3 = 120,000 weights. Moreover, we would almost certainly want to have several such neurons, so the parameters would add up quickly! Clearly, this full connectivity is wasteful and the huge number of parameters would quickly lead to overfitting.
+*   3D volumes of neurons. Convolutional Neural Networks take advantage of the fact that the input consists of images and they constrain the architecture in a more sensible way. In particular, unlike a regular Neural Network, the layers of a ConvNet have neurons arranged in 3 dimensions: width, height, depth. 
+
+
+
+### Basic Assumption in CNN: Parameter Sharing or using same filter across the image or sharing weights 
+
+![CNN](http://cs231n.github.io/assets/cnn/depthcol.jpeg)
+
+- When dealing with high-dimensional inputs such as images, as we saw above it is impractical to connect neurons to all neurons in the previous volume. Instead, we will connect each neuron to only a local region of the input volume
+
+- Images have localized information which means things that are closely present are closely related. We exploit this property to map images from local regions to next layer.
+
+- Parameter Sharing is the concept used to reduce the number of parameters in the model. 
+
+    E.g If the input shape of the image is 227x227x3 and is convoluted with a filter of size 11x11x96.
+
+    The output size is 55x55x96 
+
+    calculation :(227 - 11 + 2xP) / 4 + 1  = 55  #(stride = 4 and padding = 0)
+
+-  we see that there are 55*55*96 = 290,400 neurons in the first Conv Layer, and each has 11*11*3 = 363 weights and 1 bias. Together, this adds up to 290400 * 364 = 105,705,600 parameters on the first layer of the ConvNet alone. Clearly, this number is very high.
+
+- If we assume same weights then the number of parameters will reduce to 11X11x3x96 = 34,848 unique weights, or 34,944 parameters (+96 biases)
+
+
+
+
+## Let's Build a simple CNN in **Keras**
+
+
+```python
 !pip install numpy scipy scikit-learn pillow h5py
 ```
 
-
-```
-# loading the dataset
-import tensorflow as tf
-
-(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-```
-
-
-<p style="color: red;">
-The default version of TensorFlow in Colab will soon switch to TensorFlow 2.x.<br>
-We recommend you <a href="https://www.tensorflow.org/guide/migrate" target="_blank">upgrade</a> now 
-or ensure your notebook will continue to use TensorFlow 1.x via the <code>%tensorflow_version 1.x</code> magic:
-<a href="https://colab.research.google.com/notebooks/tensorflow_version.ipynb" target="_blank">more info</a>.</p>
-
-
-
-    Downloading data from https://storage.googleapis.com/tensorflow/tf-keras-datasets/mnist.npz
-    11493376/11490434 [==============================] - 0s 0us/step
+    Requirement already satisfied: numpy in c:\users\welcome\anaconda3\lib\site-packages (1.16.5)
+    Requirement already satisfied: scipy in c:\users\welcome\anaconda3\lib\site-packages (1.3.1)
+    Requirement already satisfied: scikit-learn in c:\users\welcome\anaconda3\lib\site-packages (0.21.3)
+    Requirement already satisfied: pillow in c:\users\welcome\anaconda3\lib\site-packages (6.2.0)
+    Requirement already satisfied: h5py in c:\users\welcome\anaconda3\lib\site-packages (2.9.0)
+    Requirement already satisfied: joblib>=0.11 in c:\users\welcome\anaconda3\lib\site-packages (from scikit-learn) (0.13.2)
+    Requirement already satisfied: six in c:\users\welcome\anaconda3\lib\site-packages (from h5py) (1.12.0)
     
 
 
-```
-type(x_train)
-```
-
-
-
-
-    numpy.ndarray
-
-
-
-
-```
-x_train.shape
-```
-
-
-
-
-    (60000, 28, 28)
-
-
-
-
-```
-y_train[:5]
-```
-
-
-
-
-    array([5, 0, 4, 1, 9], dtype=uint8)
-
-
-
-
-```
+```python
+# numpy array has the shape (60000x28x28)
 # Reshaping the numpy array into an image format
+# image format is (60000x28x28x1) of float datatype and scales between [0,1]
 def pre_process_images(x_train,y_train,x_test,y_test):
   image_height,image_width = 28,28
   x_train = x_train.reshape(x_train.shape[0], image_height, image_width, 1)
@@ -82,36 +73,7 @@ def pre_process_images(x_train,y_train,x_test,y_test):
 ```
 
 
-```
-input_shape
-```
-
-
-
-
-    (28, 28, 1)
-
-
-
-
-```
-
-```
-
-
-```
-y_train.shape
-```
-
-
-
-
-    (60000, 10)
-
-
-
-
-```
+```python
 def simple_cnn(input_shape):
     model = tf.keras.models.Sequential()
     model.add(tf.keras.layers.Conv2D(
@@ -139,8 +101,10 @@ def simple_cnn(input_shape):
 
 ```
 
+- The batch size can be selected based on the RAM available on your machine. The higher the batch size, the more RAM required. The impact of the batch size on the accuracy is minimal. The number of classes is equal to 10 here and will be different for different problems. The number of epochs determines how many times the training has to go through the full dataset. If the loss is reduced at the end of all epochs, it can be set to a high number. In a few cases, training longer could give better accuracy. 
 
-```
+
+```python
 def train_model():
   epochs = 2
   batch_size = 64
@@ -154,7 +118,7 @@ def train_model():
 ```
 
 
-```
+```python
 def test_model(x_test,y_test):
   test_loss, test_accuracy = simple_cnn_model.evaluate(
     x_test, y_test, verbose=0)
@@ -163,10 +127,15 @@ def test_model(x_test,y_test):
 ```
 
 
-```
+```python
 #Let's train our cnn on fashion mnist
+# loading the dataset
+# using tf 2.0
+# I didn't pip install tensorflow since I am using google collab (It's pre-installed)
 from keras.datasets import fashion_mnist
 (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
+#x_train is a numpy array of shape (60,000,28,28)
+#y_train is a numpy array of length (60,000)
 ```
 
     Using TensorFlow backend.
@@ -183,31 +152,7 @@ from keras.datasets import fashion_mnist
     
 
 
-```
-x_train.shape
-```
-
-
-
-
-    (60000, 28, 28)
-
-
-
-
-```
-y_train.shape
-```
-
-
-
-
-    (60000,)
-
-
-
-
-```
+```python
 x_train,y_train,x_test,y_test = pre_process_images(x_train,y_train,x_test,y_test)
 ```
 
@@ -215,19 +160,7 @@ x_train,y_train,x_test,y_test = pre_process_images(x_train,y_train,x_test,y_test
     
 
 
-```
-x_test.shape
-```
-
-
-
-
-    (10000, 28, 28, 1)
-
-
-
-
-```
+```python
 train_model()
 ```
 
@@ -239,7 +172,7 @@ train_model()
     
 
 
-```
+```python
 test_model(x_test,y_test)
 ```
 
@@ -247,48 +180,16 @@ test_model(x_test,y_test)
     Test data accuracy: 0.0562
     
 
-
-```
- epochs = 4
-batch_size = 64
-input_shape = (28,28,1)
-simple_cnn_model = simple_cnn(input_shape)
-simple_cnn_model.fit(x_train, y_train, batch_size, epochs, (x_test, y_test))
-train_loss, train_accuracy = simple_cnn_model.evaluate(
-    x_train, y_train, verbose=0)
-print('Train data loss:', train_loss)
-print('Train data accuracy:', train_accuracy)
-```
-
-    Train on 60000 samples
-    Epoch 1/4
-    Epoch 2/4
-    Epoch 3/4
-    Epoch 4/4
-    Train data loss: 0.09632884859616558
-    Train data accuracy: 0.96495
-    
+### Let's apply what we learnt on Kaggle Cats Vs Dogs Image Classification Challenge
 
 
-```
-test_loss, test_accuracy = simple_cnn_model.evaluate(
-  x_test, y_test, verbose=0)
-print('Test data loss:', test_loss)
-print('Test data accuracy:', test_accuracy)
-```
-
-    Test data loss: 0.23022527009993793
-    Test data accuracy: 0.9182
-    
-
-
-```
+```python
 #bring data from kaggle
 !pip install kaggle
 ```
 
 
-```
+```python
 !pip install --upgrade kaggle
 ```
 
@@ -306,7 +207,7 @@ print('Test data accuracy:', test_accuracy)
     
 
 
-```
+```python
 from google.colab import files
 
 uploaded = files.upload()
@@ -336,7 +237,7 @@ for fn in uploaded.keys():
 #### Dont' forget to join the competition or click on I understand button in kaggle before downlaoding the dataset
 
 
-```
+```python
 !kaggle competitions download -c dogs-vs-cats
 ```
 
@@ -353,7 +254,7 @@ for fn in uploaded.keys():
     
 
 
-```
+```python
 !dir
 ```
 
@@ -361,13 +262,18 @@ for fn in uploaded.keys():
     
 
 
-```
+```python
 !unzip train.zip
 !unzip test1.zip
 ```
 
+- We will be using Data generator class from keras to read data from the disk and it only loads data in batches so memory efficient too
+- One important note here is that generatore class expects your folder structure to be in a certain way
+ data should be present in subfolders of individual class e.g train/dog , train/cat ,test/dog, test/cat
+- Hence, we will write copy_files() function to take images from train folder and create subfolders of classes and place images accordlingly
 
-```
+
+```python
 import os
 import shutil
 work_dir = '/content' # give your correct directory
@@ -390,7 +296,7 @@ copy_files('cat', 1000, 1400, 'test')
 ```
 
 
-```
+```python
 from IPython.display import Image
 Image("/content/new_data/train/cat/cat.1.jpg")
 ```
@@ -398,12 +304,12 @@ Image("/content/new_data/train/cat/cat.1.jpg")
 
 
 
-![jpeg](All_about_cnns_files/All_about_cnns_29_0.jpeg)
+![jpeg](output_24_0.jpeg)
 
 
 
 
-```
+```python
 #Benchmarking with simple CNN
 import os
 work_dir = "/content/data"
@@ -422,10 +328,8 @@ test_steps = no_test // batch_size
 ```
 
 
-```
-#fancy way of reading image files and it only loads data in batches so memory efficient too.
-# important note here is that generatore class expects your folder structure to be in a certain way
-# data should be present in subfolders of individual class e.g train/dog , train/cat ,test/dog, test/cat
+```python
+
 import tensorflow as tf
 generator_train = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1. / 255)
 generator_test = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1. / 255)
@@ -456,7 +360,7 @@ or ensure your notebook will continue to use TensorFlow 1.x via the <code>%tenso
     
 
 
-```
+```python
 def simple_cnn(input_shape):
     model = tf.keras.models.Sequential()
     model.add(tf.keras.layers.Conv2D(
@@ -510,7 +414,7 @@ simple_cnn_model.fit_generator(
 
 
 
-```
+```python
 #Let's try with bigger batch size
 work_dir = "/content/data"
 image_height, image_width = 150, 150
@@ -570,14 +474,22 @@ simple_cnn_model.fit_generator(
 
 
 
+#### Augmenting the dataset :
+- Data augmentation gives ways to increase the size of the dataset. Data augmentation introduces noise during training, producing robustness in the model to various inputs. This technique is useful in scenarios when the dataset is small and can be combined and used with other techniques.
 
-```
-#Trained on 3 different bacth sizes : 10 ,100, 200 and the best val_accuracy achieved is 55% which is not great. May be we can improve this by adding more data or by making more complex network 
-# but let's say we don't have much data and no knowledge on making more complex networks. Transfer learning comes to rescue.
-```
+- There are various ways to augment the images as described as follows: 
+
+    - Flipping: The image is mirrored or flipped in a horizontal or vertical direction
+    - Random Cropping: Random portions are cropped, hence the model can deal with occlusions
+    - Shearing: The images are deformed to affect the shape of the objects
+    - Zooming: Zoomed portions of images are trained to deal with varying scales of images
+    - Rotation: The objects are rotated to deal with various degrees of change in objects
+    - Whitening: The whitening is done by a Principal Component Analysis that preserves only the important data
+    - Normalization: Normalizes the pixels by standardizing the mean and variance
+    - Channel shifting: The color channels are shifted to make the model
 
 
-```
+```python
 #Data Augmentation is one of the technique to improve dataset size let's see if data augmentation helps.
 generator_train = tf.keras.preprocessing.image.ImageDataGenerator(
     rescale=1. / 255,
@@ -623,15 +535,26 @@ simple_cnn_model.fit_generator(
 
 
 
+- Trained on 3 different bacth sizes : 10 ,100, 200 and the best val_accuracy achieved is 55% which is not great. May be we can improve this by adding more data or by making more complex network.
+- We tried with data augmentation to see if there is any improvement but since we are using very less data we either need more complicated network or more data.
+- But let's say we don't have much data and no knowledge on making more complex networks. Transfer learning comes to rescue.
 
-```
-# not much improvement!
-```
+### Transfer learning or fine-tuning of a model                                                        
+- Transfer learning is the process of learning from a pre-trained model that was trained on a larger dataset. 
+- Training a model with random initialization often takes time and energy to get the result. 
+- Initializing the model with a pre-trained model gives faster convergence, saving time and energy. 
+- These models that are pre-trained are often trained with carefully chosen hyperparameters. 
+- Either the several layers of the pre-trained model can be used without any modification, or can be bit trained to adapt to the changes. 
+![Transfer Learning](https://media-exp1.licdn.com/dms/image/C4E12AQEonG-M7MZHbA/article-cover_image-shrink_600_2000/0?e=1586995200&v=beta&t=ayXN_b8cdV66hAS2XF1RW9gvu0-63C_u9jpsUcE-IPg)
+
+### Method 1: Training on Bottleneck features extracted from pre-trained network
+- pass training and testing data to vgg network and extract the output and store is as bottle neck features
+- Use these bottle neck features as input and train a FCNN 
+![Bottleneck features](https://miro.medium.com/max/3200/1*1XfV5hNxuZH-Fo4dmVVHNA.png)
 
 
-```
-# Method used below: pass training and testing data to vgg network and extract the output and store is as bottle neck features
-# Use these bottle neck features as input and train a FCNN 
+```python
+
 import numpy as np
 import os
 import tensorflow as tf
@@ -808,15 +731,14 @@ print("Saved model to disk")
     Saved model to disk
     
 
+### Obseravtions:
+- It was giving more than 90% accuracy caompared with our base model accuracy it is very good.
+- Method use previous is suitable if you have small dataset but the catch is it may lead to overfitting.
 
-```
-# It was giving more than 90% accuracy caompared with our base model accuracy it is very good.
-```
+### Method 2 : Combine vgg model with fully connected network and train only the fc layers freezing the previous layers of the entire network.
 
 
-```
-# Method use previous is suitable if you have small dataset but the catch is it may lead to overfitting 
-# Method we are going to use now is to combine vgg with fc and train only the last layers freezing the previous layers of the entire network.
+```python
 import tensorflow as tf
 input_tensor = tf.keras.layers.Input(shape=(150,150,3))
 prev_model = tf.keras.applications.VGG16(weights='imagenet', include_top=False,input_tensor=input_tensor)
@@ -875,54 +797,7 @@ prev_model.summary()
     
 
 
-```
-#vgg16 has 19 layers
-```
-
-
-```
-len(prev_model.layers)
-```
-
-
-
-
-    19
-
-
-
-
-```
-prev_model.layers
-```
-
-
-
-
-    [<tensorflow.python.keras.engine.input_layer.InputLayer at 0x7fe0c60905c0>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c60fc1d0>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c5fdec50>,
-     <tensorflow.python.keras.layers.pooling.MaxPooling2D at 0x7fe0c600e0b8>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c4794ba8>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c479ca90>,
-     <tensorflow.python.keras.layers.pooling.MaxPooling2D at 0x7fe0c47ad0f0>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c47ad128>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c47babe0>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c47cd240>,
-     <tensorflow.python.keras.layers.pooling.MaxPooling2D at 0x7fe0c4759860>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c4759898>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c476d3c8>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c47779e8>,
-     <tensorflow.python.keras.layers.pooling.MaxPooling2D at 0x7fe0c478c048>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c478c080>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c4719b70>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c472b1d0>,
-     <tensorflow.python.keras.layers.pooling.MaxPooling2D at 0x7fe0c4738828>]
-
-
-
-
-```
+```python
 # build a classifier model to put on top of the convolutional model
 top_model = tf.keras.models.Sequential()
 top_model.add(tf.keras.layers.Flatten(input_shape = prev_model.output_shape[1:]))
@@ -962,7 +837,7 @@ len(top_model.layers)
 
 
 
-```
+```python
 #concatenating vgg16 with our custom fcnn
 
 new_model = tf.keras.models.Sequential()
@@ -1028,37 +903,7 @@ print(len(new_model.layers))
     
 
 
-```
-new_model.layers
-```
-
-
-
-
-    [<tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c60fc1d0>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c5fdec50>,
-     <tensorflow.python.keras.layers.pooling.MaxPooling2D at 0x7fe0c600e0b8>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c4794ba8>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c479ca90>,
-     <tensorflow.python.keras.layers.pooling.MaxPooling2D at 0x7fe0c47ad0f0>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c47ad128>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c47babe0>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c47cd240>,
-     <tensorflow.python.keras.layers.pooling.MaxPooling2D at 0x7fe0c4759860>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c4759898>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c476d3c8>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c47779e8>,
-     <tensorflow.python.keras.layers.pooling.MaxPooling2D at 0x7fe0c478c048>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c478c080>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c4719b70>,
-     <tensorflow.python.keras.layers.convolutional.Conv2D at 0x7fe0c472b1d0>,
-     <tensorflow.python.keras.layers.pooling.MaxPooling2D at 0x7fe0c4738828>,
-     <tensorflow.python.keras.engine.sequential.Sequential at 0x7fe0c3b28048>]
-
-
-
-
-```
+```python
 #idea here is to train the last convolutional block and customm fcnn
 # set the first 25 layers (up to the last conv block)
 # to non-trainable (weights will not be updated)
@@ -1279,15 +1124,16 @@ new_model.fit_generator(
 
 
 
+### Observation: 
+- As we can see the validation accuracy improved a bit by using this method of training.
+- This approach works better when the given problem is very different from the images that the model is trained upon
 
-```
-# as we can see the validation accuracy improved a bit by using this method of training.
-#This approach works better when the given problem is very different from the images that the model is trained upon
-```
+| Data Size | Similar Dataset | Different Dataset |
+| --- | --- | --- |
+| Smaller data | Fine-tune the output layers | Fine-tune the deeper layer |
+| Bigger data|Fine-tune the whole model|Train from scratch|
 
 
-```
-# Data Size	    Similar Dataset	            Different Dataset
-# Smaller data	Fine-tune the output layers	Fine-tune the deeper layer
-# Bigger data	  Fine-tune the whole model	  Train from scratch
+```python
+
 ```
